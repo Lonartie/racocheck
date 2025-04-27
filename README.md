@@ -36,20 +36,24 @@ Creating testable methods:
                           // remove this to get normal functions
 #include "source/raco.h"
 
-raco::fun<void> set_5(int& v) {
-   RACO_TEST(v = 5); // create a checkpoint before an expression
+raco::fun<int> add_5(int& v) {
+   RACO_CHECKPOINT; // manual checkpoints
+   int tmp = v;
+   RACO_TEST(tmp = tmp + 5); // automatic checkpoints before expression
+   RACO_RETURN RACO_TEST_INLINE(v = tmp); // inline checkpoints
 }
 
-raco::fun<int*> wait_5(int& v) {
-   while (!RACO_TEST_INLINE(v == 5)) { // create inline checkpoints
-   }
-   RACO_CHECKPOINT; // create manual checkpoints
-   RACO_TEST_INLINE(v = 20);
-   RACO_RETURN 0; // return results which can be checked as well
+raco::fun<int> sub_5(int& v) {
+   RACO_TEST(int tmp = v);
+   RACO_TEST(tmp = tmp - 5);
+   RACO_TEST(v = tmp);
+   RACO_RETURN v;
 }
 ```
+--> You don't need to checkpoint every line like I do. It's enough to checkpoint
+every line that reads or writes to a shared/monitored variable.
 
-Checking `set_5` and `wait_5` functions:
+Checking `add_5` and `sub_5` functions:
 ```c++
 raco::check()
     .tasks([](state& s) {
@@ -57,18 +61,17 @@ raco::check()
         auto& value = s.create<int>("value", 0);
         // setup functions to be tested
         return std::tuple {
-            set_5(value), wait_5(value) // indexed by their order
+            add_5(value), sub_5(value) // indexed by their order
         };
     })
     .invariant([](const state& s) {
         // check the invariant
         const auto& val = s.get<int>("value");
-        return val == 0 || val == 5 || val == 20;
+        return val == 0 || val == 5 || val == -5;
     })
     .post_condition([](const state& s) {
         // check the post-condition
-        return s.get<int>("value") == 20
-            && s.get_return<int*>(1) == &s.get<int>("value");
+        return s.get<int>("value") == 0;
     })
     .enable_path_pruning() // not working yet..
     .depth_limit(10) // depth limits supported, will print warnings
@@ -80,4 +83,17 @@ raco::check()
     .show_summary(PATH) // print paths in summary
     .continue_on_error() // continue on error
     .run(); // returns a boolean indicating success
+```
+
+## Example output
+```c++
+[ERROR]   : Post condition not satisfied!
+=== STATE ===
+raco::state {
+  value = -5
+  return #0 = 5
+  return #1 = -5
+}
+=== PATH ===
+{0,0,1,0,1,1}
 ```

@@ -15,6 +15,7 @@ namespace raco {
       static constexpr auto suspend_ready() noexcept -> bool;
       static constexpr auto unhandled_exception() noexcept -> void;
       constexpr auto return_value(T&& v) noexcept -> void;
+      constexpr auto return_value(const T& v) noexcept -> void;
       constexpr auto get_return_object() noexcept -> task<T>;
    };
 

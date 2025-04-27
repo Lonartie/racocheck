@@ -28,6 +28,11 @@ namespace raco {
    }
 
    template<typename T>
+   constexpr auto promise<T>::return_value(const T& v) noexcept -> void {
+      value = v;
+   }
+
+   template<typename T>
    constexpr auto promise<T>::get_return_object() noexcept -> task<T> {
       return task<T>(std::coroutine_handle<promise<T> >::from_promise(*this));
    }

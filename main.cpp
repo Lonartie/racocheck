@@ -5,16 +5,18 @@
 #define RACO_TEST_ENABLED
 #include "source/raco.h"
 
-raco::fun<void> set_5(int& v) {
-   RACO_TEST(v = 5);
+raco::fun<int> add_5(int& v) {
+   RACO_CHECKPOINT;
+   int tmp = v;
+   RACO_TEST(tmp = tmp + 5);
+   RACO_RETURN RACO_TEST_INLINE(v = tmp);
 }
 
-raco::fun<int*> wait_5(int& v) {
-   while (!RACO_TEST_INLINE(v == 5)) {
-   }
-   RACO_CHECKPOINT;
-   RACO_TEST_INLINE(v = 20);
-   RACO_RETURN 0;
+raco::fun<int> sub_5(int& v) {
+   RACO_TEST(int tmp = v);
+   RACO_TEST(tmp = tmp - 5);
+   RACO_TEST(v = tmp);
+   RACO_RETURN v;
 }
 
 int main(int, char**) {
@@ -23,16 +25,15 @@ int main(int, char**) {
           .tasks([](state& s) {
              auto& value = s.create<int>("value", 0);
              return std::tuple{
-                set_5(value), wait_5(value)
+                add_5(value), sub_5(value)
              };
           })
           .post_condition([](const state& s) {
-             return s.get<int>("value") == 20
-                    && s.get_return<int*>(1) == &s.get<int>("value");
+             return s.get<int>("value") == 0;
           })
           .invariant([](const state& s) {
              const auto& val = s.get<int>("value");
-             return val == 0 || val == 5 || val == 20;
+             return val == 0 || val == 5 || val == -5;
           })
           .enable_path_pruning()
           .depth_limit(10)
