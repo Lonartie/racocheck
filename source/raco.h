@@ -5,6 +5,10 @@
 
 #include "raco/algorithm/evaluator.h"
 #include "raco/algorithm/evaluator.hpp"
+#include "raco/algorithm/path_queue.h"
+#include "raco/algorithm/path_queue.hpp"
+#include "raco/algorithm/multi_threaded_evaluator.h"
+#include "raco/algorithm/multi_threaded_evaluator.hpp"
 
 #include "raco/core/raco.h"
 #include "raco/core/raco.hpp"

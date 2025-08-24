@@ -1,3 +1,0 @@
-/home/runner/work/racocheck/racocheck/build/CMakeFiles/racocheck.dir
-/home/runner/work/racocheck/racocheck/build/CMakeFiles/edit_cache.dir
-/home/runner/work/racocheck/racocheck/build/CMakeFiles/rebuild_cache.dir

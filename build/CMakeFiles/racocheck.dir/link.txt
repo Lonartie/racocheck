@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/racocheck.dir/link.d CMakeFiles/racocheck.dir/main.cpp.o -o racocheck

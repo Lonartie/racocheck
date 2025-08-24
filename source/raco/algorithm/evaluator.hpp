@@ -196,6 +196,64 @@ namespace raco {
    }
 
    template<typename tasks_creator>
+   void evaluator<tasks_creator>::next_path_only() {
+      next_state();
+   }
+
+   template<typename tasks_creator>
+   void evaluator<tasks_creator>::evaluate_current_path() {
+      // Reset state for this path
+      reset_state();
+      
+      // Execute the current path
+      size_t depth = 0;
+      while (depth < m_stack.size()) {
+         observe_exec();
+         depth++;
+      }
+      
+      // Check post condition if all tasks are done
+      bool all_done = true;
+      for (auto& coro : m_coros) {
+         if (!coro.done()) {
+            all_done = false;
+            break;
+         }
+      }
+      
+      if (all_done) {
+         check_post_condition();
+      }
+      
+      m_iterations++;
+   }
+
+   template<typename tasks_creator>
+   void evaluator<tasks_creator>::set_path(const std::deque<uint8_t>& path) {
+      m_stack = path;
+   }
+
+   template<typename tasks_creator>
+   std::deque<uint8_t> evaluator<tasks_creator>::get_current_path() const {
+      return m_stack;
+   }
+
+   template<typename tasks_creator>
+   bool evaluator<tasks_creator>::has_errors() const {
+      return m_has_errors;
+   }
+
+   template<typename tasks_creator>
+   std::string evaluator<tasks_creator>::get_errors() const {
+      return m_errors.str();
+   }
+
+   template<typename tasks_creator>
+   size_t evaluator<tasks_creator>::get_iterations() const {
+      return m_iterations;
+   }
+
+   template<typename tasks_creator>
    template<typename... Ts>
    void evaluator<tasks_creator>::log_info(Ts&&... ts) const {
       if (m_model->m_info_level & DEBUG) {

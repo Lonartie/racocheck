@@ -20,6 +20,11 @@ namespace raco {
 
    using default_tasks_creator_type = std::function<std::tuple<>(raco::state&)>;
 
+   // Forward declarations
+   template <typename tasks_creator> class check;
+   template <typename tasks_creator> class evaluator;
+   template <typename tasks_creator> class multi_threaded_evaluator;
+
    template<typename tasks_creator = default_tasks_creator_type>
    class check {
       using post_condition_validator = std::function<bool(const raco::state&)>;
@@ -30,6 +35,7 @@ namespace raco {
 
       template<typename Any> friend class raco::check;
       template<typename Any> friend class raco::evaluator;
+      template<typename Any> friend class raco::multi_threaded_evaluator;
 
       using tasks_t = return_type_t<tasks_creator, state&>; // tuple<task<A>, task<B>, ...>
       using tasks_pack_t = tuple_to_pack_t<tasks_t>; // pack<task<A>, task<B>, ...>
@@ -50,9 +56,10 @@ namespace raco {
       check&& show_summary(summary_type type) &&;
       check&& ignore_depth_limit_warning() &&;
       check&& continue_on_error() &&;
+      check&& num_threads(size_t threads) &&;
       [[nodiscard]] bool run() const &&;
 
-   private:
+   public: // Make these accessible for multi-threading support
       tasks_creator m_tasks_creator = nullptr;
       post_condition_validator m_post_condition_validator = default_post_condition_validator;
       invariant_validator m_invariant_validator = default_invariant_validator;
@@ -65,5 +72,6 @@ namespace raco {
       bool m_continue_on_error = false;
       bool m_path_pruning_enabled = false;
       bool m_ignore_depth_limit_warning = false;
+      size_t m_num_threads = 1;
    };
 }

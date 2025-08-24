@@ -3,6 +3,7 @@
 #include "raco/core/raco.h"
 #include "raco/misc/traits.h"
 #include "raco/algorithm/evaluator.h"
+#include "raco/algorithm/multi_threaded_evaluator.h"
 
 namespace raco {
    template<typename tasks_creator>
@@ -90,6 +91,12 @@ namespace raco {
    }
 
    template<typename tasks_creator>
+   check<tasks_creator>&& check<tasks_creator>::num_threads(size_t threads) && {
+      m_num_threads = threads;
+      return std::move(*this);
+   }
+
+   template<typename tasks_creator>
    bool check<tasks_creator>::run() const && {
       static_assert(raco::is_callable<tasks_creator, raco::state&>,
                     "The tasks creator function must accept only 'state&'!");
@@ -97,6 +104,11 @@ namespace raco {
                     "You have to set the tasks creator function by calling 'tasks(...)'");
       static_assert(raco::returns_tuple_v<tasks_creator, raco::state&>,
                     "The tasks creator function must return a tuple of raco::tasks");
-      return raco::evaluator(this).run();
+      
+      if (m_num_threads > 1) {
+         return raco::multi_threaded_evaluator(this).run();
+      } else {
+         return raco::evaluator(this).run();
+      }
    }
 }

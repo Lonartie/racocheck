@@ -23,6 +23,15 @@ namespace raco {
       void next();
       void init();
 
+      // Multi-threading support methods
+      void next_path_only();
+      void evaluate_current_path();
+      void set_path(const std::deque<uint8_t>& path);
+      std::deque<uint8_t> get_current_path() const;
+      bool has_errors() const;
+      std::string get_errors() const;
+      size_t get_iterations() const;
+
    private:
       void observe_exec();
       void check_post_condition();
