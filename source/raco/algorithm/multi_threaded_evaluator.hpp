@@ -18,32 +18,31 @@ namespace raco {
          return single_eval.run();
       }
       
-      *m_model->m_info_stream << "Starting multi-threaded evaluation with path collection...\n";
-      
-      // First, run a single-threaded pass to collect all paths and their evaluation results
+      // Step 1: Use a modified single-threaded run to collect all execution paths
+      // We need to suppress error output during this phase to avoid duplicate output
       std::vector<std::deque<uint8_t>> all_paths;
-      std::vector<bool> path_has_errors;
-      std::vector<std::string> path_errors;
       
-      // Use a modified evaluator that collects paths instead of processing them fully
       {
+         // Temporarily redirect error stream to suppress output during path collection
+         std::ostringstream null_stream;
+         std::ostream* original_error_stream = m_model->m_error_stream;
+         const_cast<check<tasks_creator>*>(m_model)->m_error_stream = &null_stream;
+         
          evaluator<tasks_creator> path_collector(m_model);
          path_collector.init();
          
-         *m_model->m_info_stream << "Collecting paths...\n";
-         
+         // Collect all paths by running the single-threaded algorithm
+         // but storing each path instead of evaluating it
          while (!path_collector.done()) {
-            auto current_path = path_collector.get_current_path();
-            all_paths.push_back(current_path);
+            all_paths.push_back(path_collector.get_current_path());
             
-            // Evaluate this path to check for errors
-            path_collector.evaluate_current_path();
-            path_has_errors.push_back(path_collector.has_errors());
-            path_errors.push_back(path_collector.get_errors());
-            
-            // Move to next path
-            path_collector.next_path_only();
+            // Move to next path (this triggers path evaluation internally, 
+            // but we'll re-evaluate later in parallel)
+            path_collector.next();
          }
+         
+         // Restore original error stream
+         const_cast<check<tasks_creator>*>(m_model)->m_error_stream = original_error_stream;
       }
       
       if (all_paths.empty()) {
@@ -51,24 +50,36 @@ namespace raco {
          return true;
       }
       
-      *m_model->m_info_stream << "Collected " << all_paths.size() << " paths\n";
-      
-      // Aggregate results
-      bool any_errors = false;
+      // Step 2: Distribute paths among worker threads
+      std::vector<std::thread> workers;
+      std::atomic<bool> any_errors{false};
+      std::atomic<size_t> total_iterations{0};
+      std::mutex output_mutex;
       std::stringstream combined_errors;
       
-      for (size_t i = 0; i < all_paths.size(); ++i) {
-         if (path_has_errors[i]) {
-            any_errors = true;
-            combined_errors << path_errors[i];
-         }
+      size_t paths_per_thread = (all_paths.size() + m_model->m_num_threads - 1) / m_model->m_num_threads;
+      
+      for (size_t thread_id = 0; thread_id < m_model->m_num_threads; ++thread_id) {
+         size_t start_idx = thread_id * paths_per_thread;
+         size_t end_idx = std::min(start_idx + paths_per_thread, all_paths.size());
+         
+         if (start_idx >= all_paths.size()) break;
+         
+         workers.emplace_back([this, &all_paths, start_idx, end_idx, &any_errors, &total_iterations, &output_mutex, &combined_errors]() {
+            worker_thread_with_paths(all_paths, start_idx, end_idx, any_errors, total_iterations, output_mutex, combined_errors);
+         });
       }
       
-      // Output results
-      *m_model->m_error_stream << combined_errors.str();
-      *m_model->m_info_stream << "Total iterations: " << all_paths.size() << "\n";
+      // Step 3: Wait for all workers to complete
+      for (auto& worker : workers) {
+         worker.join();
+      }
       
-      return !any_errors;
+      // Step 4: Output results
+      *m_model->m_error_stream << combined_errors.str();
+      *m_model->m_info_stream << "Total iterations across " << workers.size() << " threads: " << total_iterations.load() << "\n";
+      
+      return !any_errors.load();
    }
 
    template<typename tasks_creator>

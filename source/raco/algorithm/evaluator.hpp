@@ -207,23 +207,12 @@ namespace raco {
       m_errors.clear();
       m_errors.str(std::string{});
       
-      // Reset state for this path
+      // Reset state for this path - this replays the path up to the second-to-last step
       reset_state();
       
-      // Execute the current path step by step
-      for (size_t depth = 0; depth < m_stack.size(); ++depth) {
-         const auto i = m_stack[depth];
-         const auto handle = m_coros.at(i);
-         handle.resume();
-         if (m_coros.at(i).done()) {
-            set_return(i);
-         }
-         check_invariant();
-         
-         // Stop if we hit an error and not continuing on error
-         if (m_has_errors && !m_model->m_continue_on_error) {
-            break;
-         }
+      // Execute the final step if the path is not empty
+      if (!m_stack.empty()) {
+         observe_exec();
       }
       
       // Check post condition if all tasks are done
