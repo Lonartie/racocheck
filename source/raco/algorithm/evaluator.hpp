@@ -202,14 +202,28 @@ namespace raco {
 
    template<typename tasks_creator>
    void evaluator<tasks_creator>::evaluate_current_path() {
+      // Reset error state for this path evaluation
+      m_has_errors = false;
+      m_errors.clear();
+      m_errors.str(std::string{});
+      
       // Reset state for this path
       reset_state();
       
-      // Execute the current path
-      size_t depth = 0;
-      while (depth < m_stack.size()) {
-         observe_exec();
-         depth++;
+      // Execute the current path step by step
+      for (size_t depth = 0; depth < m_stack.size(); ++depth) {
+         const auto i = m_stack[depth];
+         const auto handle = m_coros.at(i);
+         handle.resume();
+         if (m_coros.at(i).done()) {
+            set_return(i);
+         }
+         check_invariant();
+         
+         // Stop if we hit an error and not continuing on error
+         if (m_has_errors && !m_model->m_continue_on_error) {
+            break;
+         }
       }
       
       // Check post condition if all tasks are done
