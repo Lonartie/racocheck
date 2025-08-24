@@ -3,6 +3,7 @@
 #include "evaluator.h"
 #include "raco/core/raco.h"
 #include <iomanip>
+#include <cmath>
 
 namespace raco {
    template<typename tasks_creator>
@@ -258,7 +259,7 @@ namespace raco {
       float_t current = 0;
       size_t depth = m_max_depth - 1;
       for (auto&& i: m_stack) {
-         current += i * std::pow<float_t>(m_coros.size(), depth--);
+         current += i * std::pow(static_cast<float_t>(m_coros.size()), static_cast<float_t>(depth--));
       }
       return current;
    }
