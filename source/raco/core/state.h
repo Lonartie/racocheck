@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <any>
+#include <functional>
 
 namespace raco {
    class state {

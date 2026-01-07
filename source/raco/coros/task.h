@@ -1,6 +1,7 @@
 #pragma once
 
 #include <coroutine>
+#include <optional>
 
 namespace raco {
    template<typename T> struct promise;
